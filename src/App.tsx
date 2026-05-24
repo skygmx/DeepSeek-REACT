@@ -4,7 +4,7 @@ import { ChatSidebar } from './components/ChatSidebar'
 import { VoiceButton } from './components/VoiceButton'
 import { ChatProvider } from './store/chatStore'
 import { useChatStore } from './store/useChatStore'
-import { useStreamChat } from './hooks/useStreamChat'
+import { useWebSocketChat } from './hooks/useWebSocketChat'
 import { renderMarkdown } from './utils/markdown'
 import styles from './App.module.less'
 
@@ -22,7 +22,7 @@ function ChatPage() {
     formatMessagesForLLM,
   } = useChatStore()
 
-  const { loading, sendMessage } = useStreamChat({
+  const { loading, sendMessage } = useWebSocketChat({
     getHistory: formatMessagesForLLM,
     addUserMessage,
     addAssistantMessage,
