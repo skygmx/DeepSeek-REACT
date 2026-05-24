@@ -69,7 +69,7 @@ function ChatPage() {
             <p className={styles.overline}>AI Assistant</p>
             <h1>{currentConversation.tittle}</h1>
             <p className={styles.subline}>
-              流式聊天和 Markdown 渲染已经迁移到 React，语音入口保留给后续音频链路。
+              流式聊天和 Markdown 渲染已经迁移到 React，语音输入会先转写到输入框。
             </p>
           </div>
 
@@ -137,7 +137,7 @@ function ChatPage() {
             />
 
             <div className={styles.composerActions}>
-              <VoiceButton />
+              <VoiceButton disabled={loading} onTranscript={setInputMessage} />
               <button
                 className={styles.sendButton}
                 type="button"

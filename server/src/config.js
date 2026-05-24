@@ -6,11 +6,20 @@ const rootDir = normalize(join(serverDir, '..'))
 
 export const serverConfig = {
   port: Number(process.env.PORT ?? 3000),
-  wsPath: '/ws/chat',
+  wsPaths: {
+    chat: '/ws/chat',
+    asr: '/ws/asr',
+  },
   rootDir,
   distDir: join(rootDir, 'dist'),
   deepSeekApiKey: process.env.DEEPSEEK_API_KEY,
   deepSeekApiUrl:
     process.env.DEEPSEEK_API_URL ?? 'https://api.deepseek.com/chat/completions',
+  doubaoAsrAppKey: process.env.DOUBAO_ASR_APP_KEY,
+  doubaoAsrAccessKey: process.env.DOUBAO_ASR_ACCESS_KEY,
+  doubaoAsrResourceId:
+    process.env.DOUBAO_ASR_RESOURCE_ID ?? 'volc.bigasr.sauc.duration',
+  doubaoAsrWsUrl:
+    process.env.DOUBAO_ASR_WS_URL ??
+    'wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async',
 }
-

@@ -1,6 +1,13 @@
+.voiceControl {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .voiceButton {
   width: 54px;
   height: 54px;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -10,6 +17,11 @@
   font: inherit;
   background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
   box-shadow: 0 12px 30px rgba(15, 118, 110, 0.28);
+  cursor: pointer;
+
+  svg {
+    flex: 0 0 auto;
+  }
 
   &:disabled {
     opacity: 0.55;
@@ -17,3 +29,20 @@
   }
 }
 
+.recording {
+  background: linear-gradient(135deg, #dc2626 0%, #f97316 100%);
+  box-shadow: 0 0 0 6px rgba(248, 113, 113, 0.14);
+}
+
+.voiceHint {
+  max-width: 168px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 768px) {
+  .voiceControl {
+    flex: 1;
+  }
+}
