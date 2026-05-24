@@ -1,0 +1,105 @@
+@import 'github-markdown-css/github-markdown.css';
+@import 'highlight.js/styles/github-dark.css';
+
+:root {
+  --page-bg: #eef4ff;
+  --panel-bg: rgba(255, 255, 255, 0.72);
+  --panel-strong: rgba(255, 255, 255, 0.88);
+  --line: rgba(148, 163, 184, 0.18);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --brand: #2563eb;
+  --brand-strong: #1d4ed8;
+  --assistant: #0f766e;
+  --shadow-lg: 0 30px 80px rgba(37, 99, 235, 0.15);
+  --shadow-md: 0 16px 38px rgba(15, 23, 42, 0.12);
+  --radius-xl: 28px;
+  --radius-lg: 22px;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    sans-serif;
+  color: var(--text-primary);
+  background: var(--page-bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-width: 320px;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+.markdown-body {
+  color: var(--text-primary);
+
+  pre {
+    margin: 16px 0;
+  }
+
+  .hljs {
+    margin: 16px 0;
+    padding: 18px;
+    border-radius: 16px;
+    font-family: 'Fira Code', 'Courier New', Courier, monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+
+  p {
+    margin: 12px 0;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 20px 0 10px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text-primary);
+  }
+
+  ul,
+  ol {
+    margin: 12px 0;
+    padding-left: 24px;
+  }
+
+  li {
+    margin: 4px 0;
+  }
+
+  a {
+    color: var(--brand);
+    text-decoration: none;
+  }
+
+  blockquote {
+    margin: 16px 0;
+    padding-left: 16px;
+    border-left: 4px solid var(--brand);
+    color: var(--text-secondary);
+  }
+}
+
