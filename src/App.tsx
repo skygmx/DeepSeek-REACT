@@ -2,10 +2,10 @@ import { SendHorizontal } from 'lucide-react'
 import { useEffect, useMemo, useRef } from 'react'
 import { ChatSidebar } from './components/ChatSidebar'
 import { VoiceButton } from './components/VoiceButton'
+import { MessageList } from './components/MessageList'
 import { ChatProvider } from './store/chatStore'
 import { useChatStore } from './store/useChatStore'
 import { useWebSocketChat } from './hooks/useWebSocketChat'
-import { renderMarkdown } from './utils/markdown'
 import styles from './App.module.less'
 
 function ChatPage() {
@@ -85,41 +85,7 @@ function ChatPage() {
           </div>
         </header>
 
-        <section className={styles.chatHistory} ref={chatHistoryRef}>
-          {!recentMessages.length && (
-            <div className={styles.emptyState}>
-              <div>
-                <p className={styles.emptyTitle}>开始一段新的对话</p>
-                <p className={styles.emptyCopy}>
-                  问一个具体问题，让这条 React 会话链路先跑起来。
-                </p>
-              </div>
-            </div>
-          )}
-
-          {recentMessages.map((message) => (
-            <article
-              className={`${styles.messageItem} ${message.role === 'user' ? styles.roleUser : styles.roleAssistant}`}
-              key={message.id}
-            >
-              <div className={message.role === 'user' ? styles.userMessage : styles.assistantMessage}>
-                <span className={styles.roleLabel}>
-                  {message.role === 'user' ? '你' : 'DeepSeek'}
-                </span>
-                {message.role === 'assistant' ? (
-                  <div
-                    className={`markdown-body ${styles.content}`}
-                    dangerouslySetInnerHTML={{
-                      __html: renderMarkdown(message.content),
-                    }}
-                  />
-                ) : (
-                  <div className={styles.content}>{message.content}</div>
-                )}
-              </div>
-            </article>
-          ))}
-        </section>
+        <MessageList messages={recentMessages} historyRef={chatHistoryRef} />
 
         <section className={styles.composer}>
           <div className={styles.composerHead}>
