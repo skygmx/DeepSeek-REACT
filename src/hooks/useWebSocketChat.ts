@@ -47,17 +47,61 @@ export function useWebSocketChat({
     assistantId: string
     requestId: string
   } | null>(null)
+  const pendingAssistantContentRef = useRef('')
+  const flushFrameRef = useRef<number | null>(null)
+
+  const clearFlushFrame = useCallback(() => {
+    if (flushFrameRef.current === null) return
+
+    window.cancelAnimationFrame(flushFrameRef.current)
+    flushFrameRef.current = null
+  }, [])
+
+  const flushPendingAssistantContent = useCallback(
+    (assistantId: string) => {
+      const content = pendingAssistantContentRef.current
+      if (!content) return
+
+      pendingAssistantContentRef.current = ''
+      clearFlushFrame()
+      updateAssistantMessage(assistantId, content)
+    },
+    [clearFlushFrame, updateAssistantMessage],
+  )
+
+  const resetPendingAssistantContent = useCallback(() => {
+    pendingAssistantContentRef.current = ''
+    clearFlushFrame()
+  }, [clearFlushFrame])
+
+  const queueAssistantContent = useCallback(
+    (assistantId: string, content: string) => {
+      pendingAssistantContentRef.current += content
+      if (flushFrameRef.current !== null) return
+
+      flushFrameRef.current = window.requestAnimationFrame(() => {
+        flushFrameRef.current = null
+        flushPendingAssistantContent(assistantId)
+      })
+    },
+    [flushPendingAssistantContent],
+  )
 
   const closeSocket = useCallback(() => {
     socketRef.current?.close()
     socketRef.current = null
     activeRequestRef.current = null
+    resetPendingAssistantContent()
     setLoading(false)
-  }, [])
+  }, [resetPendingAssistantContent])
 
   const cancelRequest = useCallback(() => {
     const activeRequest = activeRequestRef.current
     const socket = socketRef.current
+
+    if (activeRequest) {
+      flushPendingAssistantContent(activeRequest.assistantId)
+    }
 
     if (activeRequest && socket?.readyState === WebSocket.OPEN) {
       socket.send(
@@ -69,7 +113,7 @@ export function useWebSocketChat({
     }
 
     closeSocket()
-  }, [closeSocket])
+  }, [closeSocket, flushPendingAssistantContent])
 
   const sendMessage = useCallback(
     async (rawMessage: string) => {
@@ -117,27 +161,31 @@ export function useWebSocketChat({
           if (payload.requestId && payload.requestId !== requestId) return
 
           if (payload.type === 'chat:delta') {
-            updateAssistantMessage(assistantId, payload.content)
+            queueAssistantContent(assistantId, payload.content)
             return
           }
 
           if (payload.type === 'chat:error') {
+            flushPendingAssistantContent(assistantId)
             updateAssistantMessage(assistantId, `连接失败：${payload.message}`)
           }
 
           if (isTerminalMessage(payload.type)) {
+            flushPendingAssistantContent(assistantId)
             socket.close()
             finish(payload.type === 'chat:done')
           }
         })
 
         socket.addEventListener('error', () => {
+          flushPendingAssistantContent(assistantId)
           updateAssistantMessage(assistantId, '连接失败：WebSocket 连接异常')
           finish(false)
         })
 
         socket.addEventListener('close', () => {
           if (!settled) {
+            flushPendingAssistantContent(assistantId)
             updateAssistantMessage(assistantId, '连接失败：WebSocket 连接已关闭')
             finish(false)
           }
@@ -148,8 +196,10 @@ export function useWebSocketChat({
       addAssistantMessage,
       addUserMessage,
       closeSocket,
+      flushPendingAssistantContent,
       getHistory,
       loading,
+      queueAssistantContent,
       renameConversationFromFirstMessage,
       updateAssistantMessage,
     ],
@@ -163,4 +213,3 @@ export function useWebSocketChat({
     sendMessage,
   }
 }
-
