@@ -1,5 +1,5 @@
 import { SendHorizontal } from 'lucide-react'
-import { useEffect, useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import { ChatSidebar } from './components/ChatSidebar'
 import { VoiceButton } from './components/VoiceButton'
 import { MessageList } from './components/MessageList'
@@ -9,7 +9,6 @@ import { useWebSocketChat } from './hooks/useWebSocketChat'
 import styles from './App.module.less'
 
 function ChatPage() {
-  const chatHistoryRef = useRef<HTMLDivElement | null>(null)
   const {
     currentConversation,
     recentMessages,
@@ -38,15 +37,6 @@ function ChatPage() {
     }),
     [recentMessages],
   )
-  const latestMessageContent = recentMessages.at(-1)?.content
-
-  useEffect(() => {
-    const container = chatHistoryRef.current
-    if (!container) return
-
-    container.scrollTop = container.scrollHeight
-  }, [recentMessages.length, latestMessageContent])
-
   async function handleSend() {
     const sent = await sendMessage(inputMessage)
     if (sent) setInputMessage('')
@@ -85,7 +75,10 @@ function ChatPage() {
           </div>
         </header>
 
-        <MessageList messages={recentMessages} historyRef={chatHistoryRef} />
+        <MessageList
+          conversationId={currentConversation.id}
+          messages={recentMessages}
+        />
 
         <section className={styles.composer}>
           <div className={styles.composerHead}>
