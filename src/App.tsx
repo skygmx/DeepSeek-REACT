@@ -13,20 +13,19 @@ function ChatPage() {
     currentConversation,
     recentMessages,
     inputMessage,
+    isInitializing,
+    error,
     setInputMessage,
-    addUserMessage,
-    addAssistantMessage,
+    appendMessage,
+    updateConversation,
     updateAssistantMessage,
-    renameConversationFromFirstMessage,
-    formatMessagesForLLM,
   } = useChatStore()
 
   const { loading, sendMessage } = useWebSocketChat({
-    getHistory: formatMessagesForLLM,
-    addUserMessage,
-    addAssistantMessage,
+    conversationId: currentConversation?.id,
+    appendMessage,
+    updateConversation,
     updateAssistantMessage,
-    renameConversationFromFirstMessage,
   })
 
   const chatStats = useMemo(
@@ -57,9 +56,9 @@ function ChatPage() {
         <header className={styles.chatShell}>
           <div>
             <p className={styles.overline}>AI Assistant</p>
-            <h1>{currentConversation.tittle}</h1>
+            <h1>{currentConversation?.tittle ?? '正在加载对话'}</h1>
             <p className={styles.subline}>
-              流式聊天和 Markdown 渲染已经迁移到 React，语音输入会先转写到输入框。
+              {error ?? '会话列表和消息记录由后端数据库保存，语音输入会先转写到输入框。'}
             </p>
           </div>
 
@@ -76,14 +75,20 @@ function ChatPage() {
         </header>
 
         <MessageList
-          conversationId={currentConversation.id}
+          conversationId={currentConversation?.id ?? 'loading'}
           messages={recentMessages}
         />
 
         <section className={styles.composer}>
           <div className={styles.composerHead}>
             <span>Message</span>
-            <span>{loading ? '正在生成回复...' : 'Enter 发送，Shift + Enter 换行'}</span>
+            <span>
+              {isInitializing
+                ? '正在加载会话...'
+                : loading
+                  ? '正在生成回复...'
+                  : 'Enter 发送，Shift + Enter 换行'}
+            </span>
           </div>
 
           <div className={styles.composerBody}>
@@ -100,7 +105,12 @@ function ChatPage() {
               <button
                 className={styles.sendButton}
                 type="button"
-                disabled={loading || !inputMessage.trim()}
+                disabled={
+                  isInitializing ||
+                  loading ||
+                  !currentConversation ||
+                  !inputMessage.trim()
+                }
                 onClick={() => void handleSend()}
               >
                 <SendHorizontal aria-hidden="true" size={18} />

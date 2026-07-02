@@ -9,19 +9,25 @@ interface MessageItemProps {
 
 function MessageItemComponent({ message }: MessageItemProps) {
   const isUser = message.role === 'user'
+  const isMarkdownAssistant =
+    message.role === 'assistant' &&
+    message.kind === 'message' &&
+    message.contentFormat === 'markdown'
   const markdownContent = useMemo(() => {
-    if (message.role !== 'assistant') return ''
+    if (!isMarkdownAssistant) return ''
 
     return renderMarkdown(message.content)
-  }, [message.content, message.role])
+  }, [isMarkdownAssistant, message.content])
 
   return (
     <article
       className={`${styles.messageItem} ${isUser ? styles.roleUser : styles.roleAssistant}`}
     >
       <div className={isUser ? styles.userMessage : styles.assistantMessage}>
-        <span className={styles.roleLabel}>{isUser ? '你' : 'DeepSeek'}</span>
-        {message.role === 'assistant' ? (
+        <span className={styles.roleLabel}>
+          {isUser ? '你' : message.toolName || 'DeepSeek'}
+        </span>
+        {isMarkdownAssistant ? (
           <div
             className={`markdown-body ${styles.content}`}
             dangerouslySetInnerHTML={{

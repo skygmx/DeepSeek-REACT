@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "server:dev": "node server/index.js",
+    "db:migrate": "node server/src/db/migrate.js",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -18,6 +19,7 @@
     "highlight.js": "^11.11.1",
     "lucide-react": "^1.16.0",
     "marked": "^18.0.4",
+    "pg": "^8.22.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-virtuoso": "^4.18.7",

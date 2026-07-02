@@ -12,6 +12,7 @@ export const serverConfig = {
   },
   rootDir,
   distDir: join(rootDir, 'dist'),
+  databaseUrl: process.env.DATABASE_URL,
   deepSeekApiKey: process.env.DEEPSEEK_API_KEY,
   deepSeekApiUrl:
     process.env.DEEPSEEK_API_URL ?? 'https://api.deepseek.com/chat/completions',
