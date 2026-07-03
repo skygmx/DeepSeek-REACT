@@ -2,16 +2,17 @@ import { join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const serverDir = fileURLToPath(new URL('..', import.meta.url))
-const rootDir = normalize(join(serverDir, '..'))
+const rootDir = normalize(join(serverDir, '../..'))
+const defaultDistDir = join(rootDir, 'apps/web/dist')
 
 export const serverConfig = {
-  port: Number(process.env.PORT ?? 3000),
+  port: Number(process.env.PORT ?? 3109),
   wsPaths: {
     chat: '/ws/chat',
     asr: '/ws/asr',
   },
   rootDir,
-  distDir: join(rootDir, 'dist'),
+  distDir: process.env.WEB_DIST_DIR ?? defaultDistDir,
   databaseUrl: process.env.DATABASE_URL,
   deepSeekApiKey: process.env.DEEPSEEK_API_KEY,
   deepSeekApiUrl:

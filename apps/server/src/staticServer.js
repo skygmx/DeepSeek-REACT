@@ -25,7 +25,7 @@ export function createStaticHandler(distDir) {
   return async function handleHttpRequest(req, res) {
     if (!existsSync(distDir)) {
       res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' })
-      res.end('WebSocket server is running. Run npm run build to serve the React app.')
+      res.end('WebSocket server is running. Run pnpm build to serve the React app.')
       return
     }
 
@@ -54,4 +54,3 @@ export function createStaticHandler(distDir) {
     }
   }
 }
-

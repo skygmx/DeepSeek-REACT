@@ -1,38 +1,30 @@
 # DeepSeek React Chat
 
-React + TypeScript 版聊天应用，当前已迁移聊天主流程，并接入项目内 Node.js WebSocket 后端。
-
-## 当前能力
-
-- React + TypeScript + Vite 前端。
-- Less + CSS Modules 样式隔离。
-- 多会话聊天，当前会话数据暂存 `localStorage`。
-- `/ws/chat` WebSocket 流式聊天，后端转发 DeepSeek SSE 流。
-- `/ws/asr` WebSocket 流式语音识别，前端只转发音频，后端调用豆包 ASR。
-- 前端使用 `AudioWorklet` 采集麦克风音频，转为 16kHz、16bit、mono PCM，约 200ms 一包发送给后端。
-- 语音识别结果以全量文本返回，前端直接覆盖输入框，不自动发送消息。
+React + TypeScript 前端、Node.js 后端和 PostgreSQL/pgvector 数据库组成的聊天应用。当前主链路已接入服务端会话、消息存储、DeepSeek 流式转发和豆包 ASR。
 
 ## 项目结构
 
 ```text
-server/
-  index.js                         # HTTP 静态服务和 WebSocket 路由装配
-  src/chatSocket.js                # /ws/chat 消息协议
-  src/deepseekClient.js            # DeepSeek 流式聊天适配
-  src/asrSocket.js                 # /ws/asr 消息协议
-  src/asr/doubaoAsrClient.js       # 豆包 ASR WebSocket 客户端
-  src/asr/doubaoBinaryProtocol.js  # 豆包二进制帧封装和解析
+apps/
+  web/                         # React + Vite 前端
+  server/                      # Node.js HTTP/WebSocket/API 后端
+    db/
+      init.sql                 # Docker 初始化 pgvector 扩展
+      migrations/              # 数据库迁移
 
-src/
-  audio/pcmRecorder.ts             # 麦克风授权、AudioWorklet 节点装配
-  hooks/useWebSocketChat.ts        # 前端聊天 WebSocket hook
-  hooks/useAsrSocket.ts            # 前端语音识别 WebSocket hook
-  components/VoiceButton.tsx       # 语音输入入口
-  store/                           # 会话状态和 localStorage 持久化
-
-public/
-  pcm-recorder-worklet.js          # AudioWorkletProcessor，负责重采样和 PCM 切包
+docker-compose.yml             # 本地 PostgreSQL/pgvector
+pnpm-workspace.yaml            # pnpm workspace 配置
 ```
+
+## 当前能力
+
+- 多会话聊天，会话和消息写入 PostgreSQL。
+- `/api/conversations` 返回当前 session 可访问的会话列表。
+- `/api/conversations/:id/messages` 返回指定会话消息。
+- `/ws/chat` 转发 DeepSeek SSE 流，并在流式输出过程中更新数据库。
+- `/ws/asr` 转发麦克风 PCM 音频到豆包 ASR。
+- 前端默认运行在 `http://127.0.0.1:5273`，通过 Vite proxy 访问后端。
+- 后端默认运行在 `http://localhost:3109`。
 
 ## 环境变量
 
@@ -40,77 +32,58 @@ public/
 
 ```env
 DEEPSEEK_API_KEY=
-PORT=3000
-VITE_DEEPSEEK_WS_URL=ws://localhost:3000/ws/chat
-VITE_ASR_WS_URL=ws://localhost:3000/ws/asr
-
+PORT=3109
+DATABASE_URL=postgres://user:123456@localhost:15432/deepseek_agent
+VITE_DEEPSEEK_API_URL=/api
+VITE_DEEPSEEK_WS_URL=/ws/chat
+VITE_ASR_WS_URL=/ws/asr
 DOUBAO_ASR_APP_KEY=
 DOUBAO_ASR_ACCESS_KEY=
 DOUBAO_ASR_RESOURCE_ID=volc.bigasr.sauc.duration
 DOUBAO_ASR_WS_URL=wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async
 ```
 
-说明：
-
-- `DOUBAO_ASR_APP_KEY` / `DOUBAO_ASR_ACCESS_KEY` 对应豆包文档里的旧控制台鉴权头。
-- 当前已验证可用的资源 ID 是 `volc.bigasr.sauc.duration`。
-- `.env` 已被忽略，不要把真实密钥提交到仓库。
+`.env` 保留在仓库根目录，后端启动和迁移脚本会显式读取根目录 `.env`。
 
 ## 本地运行
 
 安装依赖：
 
 ```bash
-npm install
+pnpm install
 ```
 
-启动后端：
+启动数据库：
 
 ```bash
-npm run server:dev
+docker compose up -d postgres
 ```
 
-启动前端：
+执行迁移：
 
 ```bash
-npm run dev
+pnpm db:migrate
 ```
 
-默认地址：
-
-- 前端：`http://localhost:5173`
-- 后端：`http://localhost:3000`
-- 聊天 WebSocket：`ws://localhost:3000/ws/chat`
-- 语音 WebSocket：`ws://localhost:3000/ws/asr`
-
-## 前后端协议
-
-聊天：
-
-- 前端发送 `chat:start`
-- 后端返回 `chat:accepted`、`chat:delta`、`chat:done`
-- 取消时发送 `chat:cancel`
-
-语音识别：
-
-- 前端发送 `asr:start`
-- 前端随后发送二进制 PCM 音频包
-- 前端发送 `asr:end` 结束本轮识别
-- 后端返回 `asr:ready`、`asr:partial`、`asr:final`、`asr:ended`
-- `asr:partial` 和 `asr:final` 都返回当前完整识别文本，前端直接覆盖输入框
-
-## 校验命令
+分别启动前后端：
 
 ```bash
-npm run lint
-npm run build
+pnpm dev:server
+pnpm dev:web
 ```
 
-提交前 Husky 会自动执行以上两条命令。
+也可以同时启动：
 
-## 已知边界
+```bash
+pnpm dev
+```
 
-- 语音识别当前主要面向中文输入，前端只做提示，不主动设置语言字段。
-- 浏览器需要麦克风权限；未授权时会进入语音错误状态。
-- 聊天历史仍存在 `localStorage`，后续可迁移到后端数据库。
-- Markdown 渲染当前在前端完成，后续可补 sanitizer 和渲染缓存。
+## 常用命令
+
+```bash
+pnpm lint
+pnpm build
+pnpm preview
+```
+
+提交前 Husky 会自动执行 `pnpm lint` 和 `pnpm build`。

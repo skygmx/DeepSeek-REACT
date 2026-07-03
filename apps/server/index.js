@@ -1,4 +1,4 @@
-import 'dotenv/config'
+import './src/loadEnv.js'
 import { createServer } from 'node:http'
 import { WebSocketServer } from 'ws'
 import { serverConfig } from './src/config.js'
