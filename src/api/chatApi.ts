@@ -1,4 +1,5 @@
 import type { ChatMessage, Conversation } from '../types/chat'
+import { resolveApiBaseUrl } from '../utils/endpoints'
 
 export interface ApiConversation {
   id: string
@@ -40,8 +41,7 @@ interface SessionResponse {
 }
 
 const API_BASE_URL =
-  import.meta.env.VITE_DEEPSEEK_API_URL ??
-  `http://${window.location.hostname}:3000/api`
+  resolveApiBaseUrl(import.meta.env.VITE_DEEPSEEK_API_URL)
 
 function getErrorMessage(payload: unknown) {
   if (!payload || typeof payload !== 'object') return '请求失败'

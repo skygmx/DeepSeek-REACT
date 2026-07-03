@@ -6,6 +6,7 @@ import {
   type ApiMessage,
 } from '../api/chatApi'
 import type { ChatMessage, Conversation } from '../types/chat'
+import { resolveWebSocketUrl } from '../utils/endpoints'
 
 interface UseWebSocketChatOptions {
   conversationId?: string
@@ -32,7 +33,7 @@ type ServerMessage =
   | { type: 'chat:error'; requestId?: string; message: string }
 
 const WS_ENDPOINT =
-  import.meta.env.VITE_DEEPSEEK_WS_URL ?? `ws://${window.location.hostname}:3000/ws/chat`
+  resolveWebSocketUrl(import.meta.env.VITE_DEEPSEEK_WS_URL, '/ws/chat')
 
 function parseServerMessage(data: MessageEvent['data']) {
   if (typeof data !== 'string') return null

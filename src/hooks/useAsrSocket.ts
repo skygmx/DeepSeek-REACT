@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { PcmRecorder } from '../audio/pcmRecorder'
 import { createId } from '../utils/ids'
+import { resolveWebSocketUrl } from '../utils/endpoints'
 
 type AsrStatus = 'idle' | 'connecting' | 'recording' | 'stopping' | 'error'
 
@@ -16,7 +17,7 @@ interface UseAsrSocketOptions {
 }
 
 const ASR_WS_ENDPOINT =
-  import.meta.env.VITE_ASR_WS_URL ?? `ws://${window.location.hostname}:3000/ws/asr`
+  resolveWebSocketUrl(import.meta.env.VITE_ASR_WS_URL, '/ws/asr')
 
 function parseServerMessage(data: MessageEvent['data']) {
   if (typeof data !== 'string') return null
