@@ -1,7 +1,8 @@
+import './loadEnv.js'
 import { join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const serverDir = fileURLToPath(new URL('..', import.meta.url))
+const serverDir = fileURLToPath(new URL('../..', import.meta.url))
 const rootDir = normalize(join(serverDir, '../..'))
 const defaultDistDir = join(rootDir, 'apps/web/dist')
 

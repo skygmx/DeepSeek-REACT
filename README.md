@@ -1,16 +1,23 @@
 # DeepSeek React Chat
 
-React + TypeScript 前端、Node.js 后端和 PostgreSQL/pgvector 数据库组成的聊天应用。当前主链路已接入服务端会话、消息存储、DeepSeek 流式转发和豆包 ASR。
+React + TypeScript 前端、Express/Node.js 后端和 PostgreSQL/pgvector 数据库组成的聊天应用。当前主链路已接入服务端会话、消息存储、DeepSeek 流式转发和豆包 ASR。
 
 ## 项目结构
 
 ```text
 apps/
   web/                         # React + Vite 前端
-  server/                      # Node.js HTTP/WebSocket/API 后端
+  server/                      # Express + WebSocket/API 后端
     db/
       init.sql                 # Docker 初始化 pgvector 扩展
       migrations/              # 数据库迁移
+    src/
+      app/                     # 服务装配和启动运行时
+      config/                  # 环境变量和运行配置
+      infrastructure/          # 数据库等基础设施
+      integrations/            # 外部模型和第三方服务客户端
+      modules/                 # chat/session/asr 等业务模块
+      transports/              # HTTP 路由和 WebSocket 协议层
 
 docker-compose.yml             # 本地 PostgreSQL/pgvector
 pnpm-workspace.yaml            # pnpm workspace 配置

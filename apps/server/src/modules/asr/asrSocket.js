@@ -1,4 +1,4 @@
-import { parseClientMessage, sendJson } from './socketProtocol.js'
+import { parseClientMessage, sendJson } from '../../transports/websocket/socketProtocol.js'
 
 const DEFAULT_AUDIO_CONFIG = {
   format: 'pcm',

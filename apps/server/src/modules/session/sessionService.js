@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto'
-import { createCookie, parseCookies } from '../http/cookies.js'
+import { createCookie, parseCookies } from '../../transports/http/cookies.js'
 
 const SESSION_COOKIE_NAME = 'deepseek_session'
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30

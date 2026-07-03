@@ -1,11 +1,11 @@
-import '../loadEnv.js'
+import '../../config/loadEnv.js'
 import { readdir, readFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { closePostgresPool, createPostgresPool } from './postgres.js'
 
 const migrationsDir = fileURLToPath(
-  new URL('../../db/migrations/', import.meta.url),
+  new URL('../../../db/migrations/', import.meta.url),
 )
 
 async function ensureMigrationsTable(client) {

@@ -1,4 +1,4 @@
-import { parseClientMessage, sendJson } from './socketProtocol.js'
+import { parseClientMessage, sendJson } from '../../transports/websocket/socketProtocol.js'
 
 const STREAM_PERSIST_INTERVAL_MS = 1000
 
