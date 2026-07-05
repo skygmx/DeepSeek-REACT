@@ -1,5 +1,8 @@
 import { createIncidentFingerprint } from './incidentFingerprint.js'
-import { validateIncidentPlan } from './incidentFixSchemas.js'
+import {
+  validateIncidentPlan,
+  validatePatchResult,
+} from './incidentFixSchemas.js'
 
 export const INCIDENT_FIX_WORKFLOW_TYPE = 'incident_fix'
 export const INCIDENT_FIX_WORKFLOW_VERSION = 1
@@ -37,6 +40,7 @@ async function diagnoseAndPlan(context, tools) {
   const incidentContext = context.stepOutputs.collect_context
   const rawPlan = await tools.ai.diagnoseAndPlan({
     context: incidentContext,
+    repo: tools.repo,
   })
   const plan = validateIncidentPlan(rawPlan)
 
@@ -63,18 +67,20 @@ async function patchOnBranch(context, tools, config) {
   })
   const patchResult = await tools.ai.applyFix({
     branchName,
+    git: tools.git,
     incidentContext: context.stepOutputs.collect_context,
     plan,
     repo: tools.repo,
   })
+  const validatedPatchResult = validatePatchResult(patchResult)
   await tools.git.commitChanges({
-    message: patchResult.commitMessage,
+    message: validatedPatchResult.commitMessage,
   })
 
   return {
     output: {
       branchName,
-      patchResult,
+      patchResult: validatedPatchResult,
     },
   }
 }

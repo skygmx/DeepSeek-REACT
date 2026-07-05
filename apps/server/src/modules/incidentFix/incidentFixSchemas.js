@@ -10,6 +10,17 @@ function assertStringArray(value, fieldName) {
   }
 }
 
+function assertRequiredString(value, fieldName) {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error(`${fieldName} 不能为空`)
+  }
+  return value.trim()
+}
+
+function optionalString(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined
+}
+
 export function validateIncidentPlan(plan) {
   if (!isObject(plan)) throw new Error('修复计划必须是对象')
   if (typeof plan.summary !== 'string' || !plan.summary.trim()) {
@@ -28,9 +39,25 @@ export function validateIncidentPlan(plan) {
   return {
     confidence: plan.confidence,
     owner: plan.owner,
+    promptVersion: optionalString(plan.promptVersion),
     status: plan.status ?? 'ready_to_patch',
     summary: plan.summary.trim(),
     suspectFiles: plan.suspectFiles ?? [],
     verificationCommands: plan.verificationCommands ?? [],
+  }
+}
+
+export function validatePatchResult(result) {
+  if (!isObject(result)) throw new Error('修复结果必须是对象')
+
+  assertStringArray(result.changedFiles ?? [], 'changedFiles')
+
+  return {
+    applyPatchResult: result.applyPatchResult,
+    changedFiles: result.changedFiles ?? [],
+    commitMessage: assertRequiredString(result.commitMessage, 'commitMessage'),
+    prBody: assertRequiredString(result.prBody, 'prBody'),
+    promptVersion: optionalString(result.promptVersion),
+    prTitle: assertRequiredString(result.prTitle, 'prTitle'),
   }
 }

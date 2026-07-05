@@ -78,12 +78,24 @@ export function createServerRuntime() {
   const workflowRepository = createWorkflowRepository({ pool: postgresPool })
   const workflowRunner = createWorkflowRunner({ workflowRepository })
   const sessionService = createSessionService({ pool: postgresPool })
+  const repoTools = createRepoMcpClient({
+    rootDir: serverConfig.rootDir,
+  })
+  const gitTools = createGitMcpClient({
+    baseBranch: serverConfig.incidentFix.baseBranch,
+    rootDir: serverConfig.rootDir,
+  })
   const incidentTools = createWorkflowToolRegistry({
-    ai: createIncidentFixAiClient(),
+    ai: createIncidentFixAiClient({
+      tools: {
+        git: gitTools,
+        repo: repoTools,
+      },
+    }),
     error: createIncidentErrorMcpClient(),
-    git: createGitMcpClient(),
+    git: gitTools,
     notify: createIncidentNotifyMcpClient(),
-    repo: createRepoMcpClient(),
+    repo: repoTools,
   })
   const incidentContextService = createIncidentContextService({
     tools: incidentTools,
