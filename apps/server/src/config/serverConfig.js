@@ -27,6 +27,14 @@ export const serverConfig = {
     retrieveLimit: Number(process.env.RAG_RETRIEVE_LIMIT ?? 5),
     vectorTableName: 'document_vector_chunks',
   },
+  incidentFix: {
+    baseBranch: process.env.INCIDENT_FIX_BASE_BRANCH ?? 'main',
+    branchPrefix: process.env.INCIDENT_FIX_BRANCH_PREFIX ?? 'codex/incident-',
+    defaultOwner: process.env.INCIDENT_FIX_DEFAULT_OWNER,
+    enabled: process.env.INCIDENT_FIX_ENABLED === 'true',
+    pollIntervalMs: Number(process.env.INCIDENT_POLL_INTERVAL_MS ?? 300_000),
+    pollWindowMinutes: Number(process.env.INCIDENT_POLL_WINDOW_MINUTES ?? 10),
+  },
   doubaoAsrAppKey: process.env.DOUBAO_ASR_APP_KEY,
   doubaoAsrAccessKey: process.env.DOUBAO_ASR_ACCESS_KEY,
   doubaoAsrResourceId:
