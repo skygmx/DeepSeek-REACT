@@ -18,6 +18,15 @@ export const serverConfig = {
   deepSeekApiKey: process.env.DEEPSEEK_API_KEY,
   deepSeekApiUrl:
     process.env.DEEPSEEK_API_URL ?? 'https://api.deepseek.com/chat/completions',
+  rag: {
+    chunkOverlap: Number(process.env.RAG_CHUNK_OVERLAP ?? 200),
+    chunkSize: Number(process.env.RAG_CHUNK_SIZE ?? 1000),
+    distanceStrategy: process.env.RAG_DISTANCE_STRATEGY ?? 'cosine',
+    embeddingModel: process.env.RAG_EMBEDDING_MODEL,
+    embeddingProvider: process.env.RAG_EMBEDDING_PROVIDER,
+    retrieveLimit: Number(process.env.RAG_RETRIEVE_LIMIT ?? 5),
+    vectorTableName: 'document_vector_chunks',
+  },
   doubaoAsrAppKey: process.env.DOUBAO_ASR_APP_KEY,
   doubaoAsrAccessKey: process.env.DOUBAO_ASR_ACCESS_KEY,
   doubaoAsrResourceId:

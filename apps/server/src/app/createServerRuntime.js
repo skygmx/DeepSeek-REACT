@@ -7,6 +7,11 @@ import { bindAsrSocket } from '../modules/asr/asrSocket.js'
 import { createDoubaoAsrClient } from '../modules/asr/doubaoAsrClient.js'
 import { createChatRepository } from '../modules/chat/chatRepository.js'
 import { bindChatSocket } from '../modules/chat/chatSocket.js'
+import { createRagIngestionService } from '../modules/rag/ragIngestionService.js'
+import { createRagRepository } from '../modules/rag/ragRepository.js'
+import { createRagRetriever } from '../modules/rag/ragRetriever.js'
+import { createRagRouter } from '../modules/rag/ragRouter.js'
+import { createRagVectorStoreFactory } from '../modules/rag/ragVectorStore.js'
 import { createSessionService } from '../modules/session/sessionService.js'
 import { createApiRouter } from '../transports/http/apiRouter.js'
 import { createHttpApp } from '../transports/http/createHttpApp.js'
@@ -57,10 +62,30 @@ export function createServerRuntime() {
     connectionString: serverConfig.databaseUrl,
   })
   const chatRepository = createChatRepository({ pool: postgresPool })
+  const ragRepository = createRagRepository({ pool: postgresPool })
   const sessionService = createSessionService({ pool: postgresPool })
+  const getRagVectorStore = createRagVectorStoreFactory({
+    config: serverConfig.rag,
+    pool: postgresPool,
+  })
+  const ragIngestionService = createRagIngestionService({
+    config: serverConfig.rag,
+    getRagVectorStore,
+    ragRepository,
+  })
+  const ragRetriever = createRagRetriever({
+    config: serverConfig.rag,
+    getRagVectorStore,
+  })
+  const ragRouter = createRagRouter({
+    ragIngestionService,
+    ragRetriever,
+    sessionService,
+  })
   const staticHandler = createStaticHandler(serverConfig.distDir)
   const apiRouter = createApiRouter({
     chatRepository,
+    ragRouter,
     sessionService,
   })
   const httpApp = createHttpApp({

@@ -100,6 +100,10 @@ export function createApiRouter(services) {
     )
     .all((req, res) => sendMethodNotAllowed(res))
 
+  if (services.ragRouter) {
+    router.use('/documents', services.ragRouter)
+  }
+
   router.use((req, res) => {
     sendJson(res, 404, { message: '接口不存在' })
   })
