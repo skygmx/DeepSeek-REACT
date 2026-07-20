@@ -5,48 +5,75 @@ function getErrorMessage(error) {
 function normalizeStepResult(result) {
   if (!result || typeof result !== 'object') {
     return {
+      nextStep: null,
       output: result ?? {},
-      status: 'completed',
+      runArtifacts: null,
+      runStatus: null,
+      stepStatus: 'completed',
     }
   }
 
   return {
+    nextStep: result.nextStep ?? null,
     output: result.output ?? result,
-    status: result.status ?? 'completed',
+    runArtifacts: result.runArtifacts ?? null,
+    runStatus: result.runStatus ?? null,
+    stepStatus: result.stepStatus ?? 'completed',
   }
 }
 
-function getRunStatusFromStep(status) {
-  if (status === 'needs_human') return 'needs_human'
-  if (status === 'waiting_review') return 'waiting_review'
-  return null
+function createStepIndex(steps) {
+  return new Map(steps.map((step, index) => [step.name, index]))
+}
+
+function getNextStepIndex({ currentIndex, nextStep, stepIndex }) {
+  if (!nextStep) return currentIndex + 1
+  const nextIndex = stepIndex.get(nextStep)
+  if (nextIndex === undefined) {
+    throw new Error(`工作流下一节点不存在：${nextStep}`)
+  }
+  return nextIndex
 }
 
 export function createWorkflowRunner({ workflowRepository }) {
   async function runStep({ context, step }) {
-    await workflowRepository.startStep({
+    const startedStep = await workflowRepository.startStep({
       input: context,
       runId: context.run.id,
       stepName: step.name,
     })
+    const stepAttempt =
+      startedStep?.attempt ?? (context.stepAttempts[step.name] ?? 0) + 1
+    const stepContext = { ...context, stepAttempt }
 
     try {
-      const result = normalizeStepResult(await step.execute(context))
+      const result = normalizeStepResult(await step.execute(stepContext))
       await workflowRepository.completeStep({
         output: result.output,
         runId: context.run.id,
-        status: result.status === 'waiting_review' ? 'completed' : result.status,
+        status: result.stepStatus,
         stepName: step.name,
       })
+      if (result.runArtifacts) {
+        await workflowRepository.updateRunArtifacts({
+          id: context.run.id,
+          ...result.runArtifacts,
+        })
+      }
 
       return {
         ...context,
         lastStep: step.name,
+        nextStep: result.nextStep,
+        runStatus: result.runStatus,
+        stepAttempts: {
+          ...context.stepAttempts,
+          [step.name]: stepAttempt,
+        },
         stepOutputs: {
           ...context.stepOutputs,
           [step.name]: result.output,
         },
-        workflowStatus: getRunStatusFromStep(result.status),
       }
     } catch (error) {
       await workflowRepository.failStep({
@@ -59,34 +86,54 @@ export function createWorkflowRunner({ workflowRepository }) {
   }
 
   async function executeRun({ run, workflow }) {
-    await workflowRepository.startRun(run.id)
+    const startedRun = await workflowRepository.startRun(run.id)
+    if (!startedRun) throw new Error('工作流无法从当前状态启动')
 
     try {
       let context = {
-        input: run.input,
-        run,
+        input: startedRun.input,
+        run: startedRun,
+        stepAttempts: {},
         stepOutputs: {},
       }
+      const stepIndex = createStepIndex(workflow.steps)
+      const maxStepExecutions = workflow.maxStepExecutions ?? workflow.steps.length
+      let currentIndex = 0
+      let executionCount = 0
 
-      for (const step of workflow.steps) {
+      while (currentIndex < workflow.steps.length) {
+        if (executionCount >= maxStepExecutions) {
+          throw new Error('工作流节点执行次数超过限制')
+        }
+        const step = workflow.steps[currentIndex]
         context = await runStep({ context, step })
-        if (context.workflowStatus) {
-          return workflowRepository.completeRun({
-            id: run.id,
+        executionCount += 1
+
+        if (context.runStatus) {
+          return workflowRepository.pauseRun({
+            currentStep:
+              context.runStatus === 'needs_human' ? context.lastStep : null,
+            id: startedRun.id,
             output: context.stepOutputs,
-            status: context.workflowStatus,
+            status: context.runStatus,
           })
         }
+
+        currentIndex = getNextStepIndex({
+          currentIndex,
+          nextStep: context.nextStep,
+          stepIndex,
+        })
       }
 
       return workflowRepository.completeRun({
-        id: run.id,
+        id: startedRun.id,
         output: context.stepOutputs,
       })
     } catch (error) {
       return workflowRepository.failRun({
         errorMessage: getErrorMessage(error),
-        id: run.id,
+        id: startedRun.id,
       })
     }
   }

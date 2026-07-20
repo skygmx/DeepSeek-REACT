@@ -41,6 +41,13 @@ function toWorkflowStep(row) {
   }
 }
 
+const pauseStatuses = new Set(['needs_human', 'waiting_review'])
+const reviewStatuses = new Set(['cancelled', 'completed', 'needs_human'])
+
+function assertStatus(status, allowedStatuses, message) {
+  if (!allowedStatuses.has(status)) throw new Error(message)
+}
+
 export function createWorkflowRepository({ pool }) {
   async function createRun(options) {
     const result = await pool.query(
@@ -93,6 +100,7 @@ export function createWorkflowRepository({ pool }) {
             started_at = COALESCE(started_at, now()),
             error_message = NULL
         WHERE id = $1
+          AND status IN ('queued', 'needs_human')
         RETURNING *
       `,
       [id],
@@ -101,21 +109,19 @@ export function createWorkflowRepository({ pool }) {
     return result.rows[0] ? toWorkflowRun(result.rows[0]) : null
   }
 
-  async function completeRun({ id, output, status = 'completed' }) {
+  async function completeRun({ id, output }) {
     const result = await pool.query(
       `
         UPDATE workflow_runs
-        SET status = $2,
-            output = $3::jsonb,
+        SET status = 'completed',
+            output = $2::jsonb,
             current_step = NULL,
-            completed_at = CASE
-              WHEN $2 IN ('completed', 'failed', 'cancelled') THEN now()
-              ELSE completed_at
-            END
+            completed_at = now()
         WHERE id = $1
+          AND status = 'running'
         RETURNING *
       `,
-      [id, status, JSON.stringify(output ?? {})],
+      [id, JSON.stringify(output ?? {})],
     )
 
     return result.rows[0] ? toWorkflowRun(result.rows[0]) : null
@@ -129,9 +135,66 @@ export function createWorkflowRepository({ pool }) {
             error_message = $2,
             completed_at = now()
         WHERE id = $1
+          AND status = 'running'
         RETURNING *
       `,
       [id, errorMessage],
+    )
+
+    return result.rows[0] ? toWorkflowRun(result.rows[0]) : null
+  }
+
+  async function pauseRun({ currentStep, id, output, status }) {
+    assertStatus(status, pauseStatuses, '不支持的工作流暂停状态')
+    const result = await pool.query(
+      `
+        UPDATE workflow_runs
+        SET status = $2,
+            output = $3::jsonb,
+            current_step = $4,
+            completed_at = NULL
+        WHERE id = $1
+          AND status = 'running'
+        RETURNING *
+      `,
+      [id, status, JSON.stringify(output ?? {}), currentStep ?? null],
+    )
+
+    return result.rows[0] ? toWorkflowRun(result.rows[0]) : null
+  }
+
+  async function updateReviewStatus({ id, status }) {
+    assertStatus(status, reviewStatuses, '不支持的人工审核状态')
+    const result = await pool.query(
+      `
+        UPDATE workflow_runs
+        SET status = $2,
+            current_step = CASE WHEN $2 = 'needs_human' THEN 'review_changes' END,
+            completed_at = CASE
+              WHEN $2 IN ('completed', 'cancelled') THEN now()
+              ELSE NULL
+            END
+        WHERE id = $1
+          AND status = 'waiting_review'
+        RETURNING *
+      `,
+      [id, status],
+    )
+
+    return result.rows[0] ? toWorkflowRun(result.rows[0]) : null
+  }
+
+  async function updateRunArtifacts({ branchName, id, prUrl }) {
+    const result = await pool.query(
+      `
+        UPDATE workflow_runs
+        SET branch_name = COALESCE($2, branch_name),
+            pr_url = COALESCE($3, pr_url)
+        WHERE id = $1
+          AND status = 'running'
+        RETURNING *
+      `,
+      [id, branchName ?? null, prUrl ?? null],
     )
 
     return result.rows[0] ? toWorkflowRun(result.rows[0]) : null
@@ -241,7 +304,10 @@ export function createWorkflowRepository({ pool }) {
     failRun,
     failStep,
     findActiveRunByFingerprint,
+    pauseRun,
     startRun,
     startStep,
+    updateReviewStatus,
+    updateRunArtifacts,
   }
 }

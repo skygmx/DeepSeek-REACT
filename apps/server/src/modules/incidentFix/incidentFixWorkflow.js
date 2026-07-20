@@ -5,7 +5,9 @@ import {
 } from './incidentFixSchemas.js'
 
 export const INCIDENT_FIX_WORKFLOW_TYPE = 'incident_fix'
-export const INCIDENT_FIX_WORKFLOW_VERSION = 1
+export const INCIDENT_FIX_WORKFLOW_VERSION = 2
+
+const MAX_FIX_ATTEMPTS = 3
 
 async function ingestIncident(context, tools) {
   const input = context.input
@@ -47,7 +49,8 @@ async function diagnoseAndPlan(context, tools) {
   if (plan.status === 'needs_human') {
     return {
       output: plan,
-      status: 'needs_human',
+      runStatus: 'needs_human',
+      stepStatus: 'needs_human',
     }
   }
 
@@ -56,45 +59,73 @@ async function diagnoseAndPlan(context, tools) {
   }
 }
 
-async function patchOnBranch(context, tools, config) {
+async function createBranchAndFix(context, tools, config) {
   const incident = context.stepOutputs.ingest_incident
   const plan = context.stepOutputs.diagnose_and_plan
   const branchName = `${config.branchPrefix}${incident.fingerprint.slice(0, 12)}`
 
-  await tools.git.createBranch({
-    baseBranch: config.baseBranch,
-    branchName,
-  })
+  if (context.stepAttempt === 1) {
+    await tools.git.createBranch({
+      baseBranch: config.baseBranch,
+      branchName,
+    })
+  }
+
+  const previousVerification = context.stepOutputs.verify_fix
   const patchResult = await tools.ai.applyFix({
     branchName,
     git: tools.git,
     incidentContext: context.stepOutputs.collect_context,
-    plan,
+    plan: previousVerification
+      ? { ...plan, previousVerification }
+      : plan,
     repo: tools.repo,
   })
   const validatedPatchResult = validatePatchResult(patchResult)
-  await tools.git.commitChanges({
-    message: validatedPatchResult.commitMessage,
-  })
 
   return {
     output: {
       branchName,
       patchResult: validatedPatchResult,
     },
+    runArtifacts: { branchName },
   }
 }
 
-async function verifyAndOpenPr(context, tools) {
+async function verifyFix(context, tools) {
   const plan = context.stepOutputs.diagnose_and_plan
-  const patch = context.stepOutputs.patch_on_branch
   const verification = await tools.git.runVerificationPlan({
     commands: plan.verificationCommands,
   })
 
-  if (!verification.passed) {
-    throw new Error('修复验证未通过')
+  if (verification.passed) {
+    return { output: verification }
   }
+
+  const fixAttempts = context.stepAttempts.create_branch_and_fix ?? 1
+  return {
+    nextStep:
+      fixAttempts < MAX_FIX_ATTEMPTS ? 'create_branch_and_fix' : undefined,
+    output: verification,
+    runStatus:
+      fixAttempts >= MAX_FIX_ATTEMPTS ? 'needs_human' : undefined,
+  }
+}
+
+async function commitFix(context, tools) {
+  const patch = context.stepOutputs.create_branch_and_fix
+  const commit = await tools.git.commitChanges({
+    message: patch.patchResult.commitMessage,
+  })
+
+  return {
+    output: { commit },
+  }
+}
+
+async function createPrAndNotify(context, tools, services) {
+  const plan = context.stepOutputs.diagnose_and_plan
+  const patch = context.stepOutputs.create_branch_and_fix
 
   await tools.git.pushBranch({
     branchName: patch.branchName,
@@ -104,18 +135,6 @@ async function verifyAndOpenPr(context, tools) {
     branchName: patch.branchName,
     title: patch.patchResult.prTitle,
   })
-
-  return {
-    output: {
-      pullRequest,
-      verification,
-    },
-  }
-}
-
-async function notifyAndWait(context, tools, services) {
-  const plan = context.stepOutputs.diagnose_and_plan
-  const pullRequest = context.stepOutputs.verify_and_open_pr.pullRequest
   const owner = services.ownerResolver.resolve({
     context: context.stepOutputs.collect_context,
     plan,
@@ -132,7 +151,8 @@ async function notifyAndWait(context, tools, services) {
       owner,
       pullRequest,
     },
-    status: 'waiting_review',
+    runArtifacts: { prUrl: pullRequest.url },
+    runStatus: 'waiting_review',
   }
 }
 
@@ -152,18 +172,23 @@ export function createIncidentFixWorkflow({ config, services, tools }) {
         name: 'diagnose_and_plan',
       },
       {
-        execute: (context) => patchOnBranch(context, tools, config),
-        name: 'patch_on_branch',
+        execute: (context) => createBranchAndFix(context, tools, config),
+        name: 'create_branch_and_fix',
       },
       {
-        execute: (context) => verifyAndOpenPr(context, tools),
-        name: 'verify_and_open_pr',
+        execute: (context) => verifyFix(context, tools),
+        name: 'verify_fix',
       },
       {
-        execute: (context) => notifyAndWait(context, tools, services),
-        name: 'notify_and_wait',
+        execute: (context) => commitFix(context, tools),
+        name: 'commit_fix',
+      },
+      {
+        execute: (context) => createPrAndNotify(context, tools, services),
+        name: 'create_pr_and_notify',
       },
     ],
+    maxStepExecutions: 11,
     type: INCIDENT_FIX_WORKFLOW_TYPE,
     version: INCIDENT_FIX_WORKFLOW_VERSION,
   }
