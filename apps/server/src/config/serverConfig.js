@@ -22,6 +22,11 @@ export const serverConfig = {
     chunkOverlap: Number(process.env.RAG_CHUNK_OVERLAP ?? 200),
     chunkSize: Number(process.env.RAG_CHUNK_SIZE ?? 1000),
     distanceStrategy: process.env.RAG_DISTANCE_STRATEGY ?? 'cosine',
+    embeddingApiKey: process.env.RAG_EMBEDDING_API_KEY,
+    embeddingApiUrl:
+      process.env.RAG_EMBEDDING_API_URL ??
+      'https://ark.cn-beijing.volces.com/api/v3/embeddings/multimodal',
+    embeddingDimensions: Number(process.env.RAG_EMBEDDING_DIMENSIONS ?? 2048),
     embeddingModel: process.env.RAG_EMBEDDING_MODEL,
     embeddingProvider: process.env.RAG_EMBEDDING_PROVIDER,
     retrieveLimit: Number(process.env.RAG_RETRIEVE_LIMIT ?? 5),

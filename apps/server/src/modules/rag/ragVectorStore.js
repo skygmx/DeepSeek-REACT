@@ -10,6 +10,9 @@ const vectorColumns = {
 
 function createVectorStore({ config, pool }) {
   const embeddings = createRagEmbeddings({
+    apiKey: config.embeddingApiKey,
+    apiUrl: config.embeddingApiUrl,
+    dimensions: config.embeddingDimensions,
     model: config.embeddingModel,
     provider: config.embeddingProvider,
   })
